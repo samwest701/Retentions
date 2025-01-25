@@ -23,6 +23,9 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Select,
+  MenuItem,
+  Chip,
 } from "@mui/material";
 import "./App.css";
 
@@ -211,37 +214,93 @@ function Login() {
 }
 
 function CancellationDialog({ open, onClose, onAcceptOffer, onConfirmCancel, discountRate }) {
+  const [reason, setReason] = useState('');
+  const [feedback, setFeedback] = useState('');
+  const [step, setStep] = useState(1);
+
+  const reasons = [
+    "Too expensive",
+    "Not using enough",
+    "Found better alternative",
+    "Missing features",
+    "Technical issues",
+    "Other"
+  ];
+
+  const handleNext = () => {
+    if (reason) {
+      setStep(2);
+    }
+  };
+
+  const handleCancel = () => {
+    onConfirmCancel(reason, feedback);
+  };
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ textAlign: 'center', fontWeight: 600 }}>
-        We'd Hate to See You Go!
+        {step === 1 ? "We're Sorry to See You Go!" : "Wait! Special Offer"}
       </DialogTitle>
       <DialogContent>
-        <Typography variant="body1" sx={{ textAlign: 'center', mb: 2 }}>
-          Stay with us and save {discountRate}% on your next billing cycle.
-        </Typography>
+        {step === 1 ? (
+          <>
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              Please tell us why you're leaving:
+            </Typography>
+            <Select
+              fullWidth
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              sx={{ mb: 2 }}
+            >
+              {reasons.map((r) => (
+                <MenuItem key={r} value={r}>{r}</MenuItem>
+              ))}
+            </Select>
+            <TextField
+              fullWidth
+              multiline
+              rows={4}
+              label="Additional feedback"
+              value={feedback}
+              onChange={(e) => setFeedback(e.target.value)}
+            />
+          </>
+        ) : (
+          <Typography variant="body1" sx={{ textAlign: 'center', mb: 2 }}>
+            We value your business! Stay with us and receive {discountRate}% off your next 3 months.
+          </Typography>
+        )}
       </DialogContent>
       <DialogActions sx={{ padding: 3, display: 'flex', gap: 2, justifyContent: 'center' }}>
-        <Button
-          variant="contained"
-          onClick={onAcceptOffer}
-          sx={{
-            borderRadius: "8px",
-            minWidth: '140px'
-          }}
-        >
-          Accept Offer
-        </Button>
-        <Button
-          variant="outlined"
-          onClick={onConfirmCancel}
-          sx={{
-            borderRadius: "8px",
-            minWidth: '140px'
-          }}
-        >
-          Continue Cancellation
-        </Button>
+        {step === 1 ? (
+          <Button
+            variant="contained"
+            onClick={handleNext}
+            disabled={!reason}
+            sx={{ borderRadius: "8px", minWidth: '140px' }}
+          >
+            Next
+          </Button>
+        ) : (
+          <>
+            <Button
+              variant="contained"
+              onClick={() => onAcceptOffer(reason, feedback)}
+              sx={{ borderRadius: "8px", minWidth: '140px' }}
+            >
+              Accept Offer
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={handleCancel}
+              sx={{ borderRadius: "8px", minWidth: '140px' }}
+            >
+              Cancel Anyway
+            </Button>
+          </>
+        )}
       </DialogActions>
     </Dialog>
   );
@@ -287,7 +346,7 @@ function Dashboard() {
     setShowCancellationDialog(true);
   };
 
-  const handleAcceptOffer = async () => {
+  const handleAcceptOffer = async (reason, feedback) => {
     const token = localStorage.getItem("token");
     try {
       const response = await axios.post(
@@ -297,6 +356,8 @@ function Dashboard() {
           user_id: selectedClient.name,
           discount_offered: true,
           accepted: true,
+          reason,
+          feedback,
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -315,7 +376,7 @@ function Dashboard() {
     }
   };
 
-  const handleConfirmCancel = async () => {
+  const handleConfirmCancel = async (reason, feedback) => {
     const token = localStorage.getItem("token");
     try {
       const response = await axios.post(
@@ -325,6 +386,8 @@ function Dashboard() {
           user_id: selectedClient.name,
           discount_offered: true,
           accepted: false,
+          reason,
+          feedback,
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -467,20 +530,28 @@ function Dashboard() {
             <TableHead>
               <TableRow sx={{ backgroundColor: "#f8f9fa" }}>
                 <TableCell sx={{ fontWeight: "bold" }}>Client</TableCell>
-                <TableCell sx={{ fontWeight: "bold" }}>
-                  Total Cancellations
-                </TableCell>
-                <TableCell sx={{ fontWeight: "bold" }}>
-                  Accepted Offers
-                </TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>Status</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>Total Cancellations</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>Retained</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>Avg Retention Discount</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>Common Reasons</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {analytics.map((row) => (
                 <TableRow key={row.name}>
                   <TableCell>{row.name}</TableCell>
+                  <TableCell>
+                    <Chip 
+                      label={row.subscription_status}
+                      color={row.subscription_status === 'active' ? 'success' : 'error'}
+                      size="small"
+                    />
+                  </TableCell>
                   <TableCell>{row.total_cancellations}</TableCell>
                   <TableCell>{row.accepted_offers}</TableCell>
+                  <TableCell>{row.avg_retention_discount}%</TableCell>
+                  <TableCell>{row.common_reasons}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

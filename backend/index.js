@@ -58,14 +58,20 @@ CREATE TABLE IF NOT EXISTS clients (
 id SERIAL PRIMARY KEY,
 user_id INTEGER REFERENCES users(id),
 name TEXT NOT NULL,
-discount_rate INTEGER NOT NULL
+discount_rate INTEGER NOT NULL,
+subscription_status TEXT DEFAULT 'active',
+subscription_start_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+next_billing_date TIMESTAMP DEFAULT (CURRENT_TIMESTAMP + INTERVAL '1 month')
 );
 CREATE TABLE IF NOT EXISTS cancellations (
 id SERIAL PRIMARY KEY,
 client_id INTEGER REFERENCES clients(id),
 user_id TEXT NOT NULL,
 discount_offered BOOLEAN,
-accepted BOOLEAN
+accepted BOOLEAN,
+reason TEXT,
+feedback TEXT,
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 `);
 
@@ -139,11 +145,39 @@ app.post("/api/clients", authenticate, async (req, res) => {
 
 // Track cancellation event
 app.post("/api/cancellations", authenticate, async (req, res) => {
-  const { client_id, user_id, discount_offered, accepted } = req.body;
-  const result = await pool.query(
-    "INSERT INTO cancellations (client_id, user_id, discount_offered, accepted) VALUES ($1, $2, $3, $4) RETURNING *",
-    [client_id, user_id, discount_offered, accepted]
+  const { client_id, user_id, discount_offered, accepted, reason, feedback } =
+    req.body;
+
+  const client = await pool.query(
+    "SELECT subscription_status FROM clients WHERE id = $1",
+    [client_id]
   );
+
+  if (accepted) {
+    // Update client with new discount and reset status
+    await pool.query(
+      `UPDATE clients 
+       SET subscription_status = 'active', 
+           next_billing_date = CURRENT_TIMESTAMP + INTERVAL '1 month'
+       WHERE id = $1`,
+      [client_id]
+    );
+  } else {
+    // Mark subscription as cancelled
+    await pool.query(
+      "UPDATE clients SET subscription_status = 'cancelled' WHERE id = $1",
+      [client_id]
+    );
+  }
+
+  const result = await pool.query(
+    `INSERT INTO cancellations 
+     (client_id, user_id, discount_offered, accepted, reason, feedback) 
+     VALUES ($1, $2, $3, $4, $5, $6) 
+     RETURNING *`,
+    [client_id, user_id, discount_offered, accepted, reason, feedback]
+  );
+
   res.json(result.rows[0]);
 });
 
@@ -159,12 +193,17 @@ app.get("/api/clients", authenticate, async (req, res) => {
 app.get("/api/analytics", authenticate, async (req, res) => {
   const result = await pool.query(
     `
-        SELECT clients.name, COUNT(cancellations.id) AS total_cancellations,
-        SUM(CASE WHEN cancellations.accepted THEN 1 ELSE 0 END) AS accepted_offers
-        FROM clients
-        LEFT JOIN cancellations ON clients.id = cancellations.client_id
-        WHERE clients.user_id = $1
-        GROUP BY clients.name;
+    SELECT 
+        clients.name,
+        clients.subscription_status,
+        COUNT(cancellations.id) AS total_cancellations,
+        SUM(CASE WHEN cancellations.accepted THEN 1 ELSE 0 END) AS accepted_offers,
+        ROUND(AVG(CASE WHEN cancellations.accepted THEN clients.discount_rate ELSE 0 END), 2) AS avg_retention_discount,
+        STRING_AGG(DISTINCT cancellations.reason, ', ') AS common_reasons
+    FROM clients
+    LEFT JOIN cancellations ON clients.id = cancellations.client_id
+    WHERE clients.user_id = $1
+    GROUP BY clients.name, clients.subscription_status;
     `,
     [req.user.id]
   );
