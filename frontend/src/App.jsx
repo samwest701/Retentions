@@ -19,6 +19,10 @@ import {
   TableHead,
   TableRow,
   Paper,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import "./App.css";
 
@@ -206,10 +210,49 @@ function Login() {
   );
 }
 
+function CancellationDialog({ open, onClose, onAcceptOffer, onConfirmCancel, discountRate }) {
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ textAlign: 'center', fontWeight: 600 }}>
+        We'd Hate to See You Go!
+      </DialogTitle>
+      <DialogContent>
+        <Typography variant="body1" sx={{ textAlign: 'center', mb: 2 }}>
+          Stay with us and save {discountRate}% on your next billing cycle.
+        </Typography>
+      </DialogContent>
+      <DialogActions sx={{ padding: 3, display: 'flex', gap: 2, justifyContent: 'center' }}>
+        <Button
+          variant="contained"
+          onClick={onAcceptOffer}
+          sx={{
+            borderRadius: "8px",
+            minWidth: '140px'
+          }}
+        >
+          Accept Offer
+        </Button>
+        <Button
+          variant="outlined"
+          onClick={onConfirmCancel}
+          sx={{
+            borderRadius: "8px",
+            minWidth: '140px'
+          }}
+        >
+          Continue Cancellation
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
 function Dashboard() {
   const [clients, setClients] = useState([]);
   const [newClient, setNewClient] = useState({ name: "", discount_rate: "" });
   const [analytics, setAnalytics] = useState([]);
+  const [showCancellationDialog, setShowCancellationDialog] = useState(false);
+  const [selectedClient, setSelectedClient] = useState(null);
   const navigate = useNavigate();
 
   const fetchClients = async () => {
@@ -237,6 +280,68 @@ function Dashboard() {
     });
     setNewClient({ name: "", discount_rate: "" });
     fetchClients();
+  };
+
+  const handleCancelClick = (client) => {
+    setSelectedClient(client);
+    setShowCancellationDialog(true);
+  };
+
+  const handleAcceptOffer = async () => {
+    const token = localStorage.getItem("token");
+    try {
+      const response = await axios.post(
+        `/api/cancellations`,
+        {
+          client_id: selectedClient.id,
+          user_id: selectedClient.name,
+          discount_offered: true,
+          accepted: true,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (response.status === 200) {
+        alert("Offer accepted! Your discount will be applied to your next billing cycle.");
+        setShowCancellationDialog(false);
+        setSelectedClient(null);
+        fetchAnalytics();
+      }
+    } catch (err) {
+      console.error("Error accepting offer:", err);
+      alert("Failed to process offer: " + (err.response?.data?.error || "Unknown error"));
+    }
+  };
+
+  const handleConfirmCancel = async () => {
+    const token = localStorage.getItem("token");
+    try {
+      const response = await axios.post(
+        `/api/cancellations`,
+        {
+          client_id: selectedClient.id,
+          user_id: selectedClient.name,
+          discount_offered: true,
+          accepted: false,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (response.status === 200) {
+        alert("Your subscription has been cancelled.");
+        setShowCancellationDialog(false);
+        setSelectedClient(null);
+        fetchAnalytics();
+        fetchClients(); // Refresh the clients list
+      }
+    } catch (err) {
+      console.error("Error cancelling:", err);
+      alert("Failed to process cancellation: " + (err.response?.data?.error || "Unknown error"));
+    }
   };
 
   const handleLogout = () => {
@@ -329,6 +434,7 @@ function Dashboard() {
               <TableRow sx={{ backgroundColor: "#f8f9fa" }}>
                 <TableCell sx={{ fontWeight: "bold" }}>Name</TableCell>
                 <TableCell sx={{ fontWeight: "bold" }}>Discount Rate</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -336,6 +442,17 @@ function Dashboard() {
                 <TableRow key={client.id}>
                   <TableCell>{client.name}</TableCell>
                   <TableCell>{client.discount_rate}%</TableCell>
+                  <TableCell>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="small"
+                      onClick={() => handleCancelClick(client)}
+                      sx={{ borderRadius: "6px" }}
+                    >
+                      Cancel Subscription
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -370,6 +487,14 @@ function Dashboard() {
           </Table>
         </TableContainer>
       </div>
+
+      <CancellationDialog
+        open={showCancellationDialog}
+        onClose={() => setShowCancellationDialog(false)}
+        onAcceptOffer={handleAcceptOffer}
+        onConfirmCancel={handleConfirmCancel}
+        discountRate={selectedClient?.discount_rate}
+      />
     </Container>
   );
 }
