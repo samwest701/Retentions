@@ -1,0 +1,181 @@
+:root {
+  --primary-color: #6366f1;
+  --primary-hover: #4f46e5;
+  --secondary-color: #1e293b;
+  --background-light: #f1f5f9;
+  --shadow-soft: 0 4px 6px rgba(0, 0, 0, 0.05);
+  --shadow-medium: 0 10px 25px rgba(0, 0, 0, 0.08);
+  --shadow-large: 0 20px 40px rgba(0, 0, 0, 0.12);
+}
+
+body {
+  background-color: var(--background-light);
+  margin: 0;
+  font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+}
+
+.container {
+  padding: 40px 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.auth-container {
+  max-width: 380px;
+  margin: 100px auto;
+  padding: 35px;
+  box-shadow: var(--shadow-large);
+  border-radius: 16px;
+  background: white;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary-color), var(--primary-hover));
+}
+
+.auth-container:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-large);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.auth-form .MuiTextField-root {
+  background-color: white;
+}
+
+.auth-form .MuiButton-contained {
+  background: linear-gradient(90deg, var(--primary-color), var(--primary-hover));
+  text-transform: none;
+  font-size: 1rem;
+  font-weight: 500;
+  padding: 12px;
+  transition: all 0.3s ease;
+  margin-top: 10px;
+}
+
+.auth-form .MuiButton-contained:hover {
+  background: linear-gradient(90deg, var(--primary-hover), var(--primary-color));
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+}
+
+.dashboard-header {
+  background: white;
+  padding: 25px 35px;
+  border-radius: 16px;
+  margin-bottom: 40px;
+  box-shadow: var(--shadow-soft);
+  border-bottom: none;
+}
+
+.add-client-section {
+  background: white;
+  padding: 35px;
+  border-radius: 16px;
+  margin-bottom: 40px;
+  box-shadow: var(--shadow-medium);
+  position: relative;
+  overflow: hidden;
+}
+
+.add-client-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary-color), var(--primary-hover));
+}
+
+.client-form {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.client-form .MuiTextField-root {
+  background-color: white;
+}
+
+.client-form .MuiButton-contained {
+  background-color: var(--primary-color);
+  text-transform: none;
+  font-size: 1rem;
+  min-width: 120px;
+}
+
+.tables-section {
+  margin-top: 50px;
+}
+
+.table-container {
+  margin-bottom: 40px;
+  box-shadow: var(--shadow-medium);
+  border-radius: 16px;
+  overflow: hidden;
+  background: white;
+}
+
+.table-container .MuiTable-root {
+  background-color: white;
+}
+
+.table-container .MuiTableHead-root {
+  background: linear-gradient(90deg, #f8fafc, #f1f5f9);
+}
+
+.table-container .MuiTableHead-root .MuiTableCell-root {
+  font-weight: 600;
+  color: var(--secondary-color);
+  font-size: 1rem;
+}
+
+.table-container .MuiTableBody-root .MuiTableCell-root {
+  font-size: 0.95rem;
+}
+
+.table-container .MuiTableRow-root:hover {
+  background-color: #f8fafc;
+}
+
+.section-title {
+  margin: 40px 0 25px 0;
+  color: var(--secondary-color);
+  font-weight: 600;
+  font-size: 1.5rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .auth-container {
+    margin: 40px auto;
+    max-width: 320px;
+    padding: 25px;
+  }
+
+  .client-form {
+    flex-direction: column;
+  }
+
+  .client-form .MuiTextField-root,
+  .client-form .MuiButton-contained {
+    width: 100%;
+  }
+}
